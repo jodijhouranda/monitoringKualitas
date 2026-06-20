@@ -226,8 +226,9 @@ async def scrape_detail_data_jodi(page, xsrf_token, input_csv, custom_name="jodi
     for coro in async_tqdm.as_completed(tasks, desc="Scraping Detail Jodi"):
         a_id, result, error = await coro
         if result:
+            result['Assignment ID'] = a_id
             all_api_data.append(result)
-        else:
+        if error:
             failed_logs.append({"Assignment ID": a_id, "Error": error})
             
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -397,19 +398,24 @@ async def main():
                 df_detail = pd.read_csv(detail_csv, low_memory=False)
                 
                 # Tambahkan status assignment dari df_usaha
-                if 'Assignment ID' in df_detail.columns and 'Assignment ID' in df_usaha.columns and 'assignmentStatusAlias' in df_usaha.columns:
-                    status_map = df_usaha.set_index('Assignment ID')['assignmentStatusAlias'].to_dict()
+                usaha_id_col = 'id' if 'id' in df_usaha.columns else 'Assignment ID'
+                
+                if 'Assignment ID' in df_detail.columns and usaha_id_col in df_usaha.columns and 'assignmentStatusAlias' in df_usaha.columns:
+                    status_map = df_usaha.set_index(usaha_id_col)['assignmentStatusAlias'].to_dict()
                     df_detail['Status Assignment'] = df_detail['Assignment ID'].map(status_map)
                     
-                    # Pindahkan kolom ke setelah 'id' atau 'Assignment ID'
+                    # Pindahkan kolom ke setelah 'Assignment ID'
                     cols = df_detail.columns.tolist()
-                    cols.remove('Status Assignment')
-                    if 'id' in cols:
-                        insert_idx = cols.index('id') + 1
-                    else:
-                        insert_idx = cols.index('Assignment ID') + 1
-                    cols.insert(insert_idx, 'Status Assignment')
-                    df_detail = df_detail[cols]
+                    if 'Status Assignment' in cols:
+                        cols.remove('Status Assignment')
+                        if 'Assignment ID' in cols:
+                            insert_idx = cols.index('Assignment ID') + 1
+                        elif 'id' in cols:
+                            insert_idx = cols.index('id') + 1
+                        else:
+                            insert_idx = 0
+                        cols.insert(insert_idx, 'Status Assignment')
+                        df_detail = df_detail[cols]
                     
                 df_detail.to_excel(writer, sheet_name='Detail_Data', index=False)
                 
