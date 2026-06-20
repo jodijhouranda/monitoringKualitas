@@ -395,6 +395,22 @@ async def main():
             # Sheet 3: Detail Data
             if detail_csv and os.path.exists(detail_csv):
                 df_detail = pd.read_csv(detail_csv, low_memory=False)
+                
+                # Tambahkan status assignment dari df_usaha
+                if 'Assignment ID' in df_detail.columns and 'Assignment ID' in df_usaha.columns and 'assignmentStatusAlias' in df_usaha.columns:
+                    status_map = df_usaha.set_index('Assignment ID')['assignmentStatusAlias'].to_dict()
+                    df_detail['Status Assignment'] = df_detail['Assignment ID'].map(status_map)
+                    
+                    # Pindahkan kolom ke setelah 'id' atau 'Assignment ID'
+                    cols = df_detail.columns.tolist()
+                    cols.remove('Status Assignment')
+                    if 'id' in cols:
+                        insert_idx = cols.index('id') + 1
+                    else:
+                        insert_idx = cols.index('Assignment ID') + 1
+                    cols.insert(insert_idx, 'Status Assignment')
+                    df_detail = df_detail[cols]
+                    
                 df_detail.to_excel(writer, sheet_name='Detail_Data', index=False)
                 
             # Sheet 4: Error Log (Jika ada)
