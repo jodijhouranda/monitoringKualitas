@@ -262,7 +262,7 @@ async def main():
     scrape_detail = (pilihan != '1')
     
     template_file = os.path.join(dir_path, "Template jodi.xlsx")
-    max_workers = 50
+    max_workers = 200
     
     print("\n1. Melakukan inisialisasi browser...")
     p, browser, page, xsrf_token = await init_browser_jodi()
@@ -356,7 +356,12 @@ async def main():
                 # --- SHEET KINERJA PPL ---
                 if 'PPL' in df_merged.columns:
                     valid_ppl_cols = [c for c in ['Open', 'Submit', 'Draft 1', 'Draft 2'] + other_statuses if c in df_merged.columns]
-                    df_ppl = df_merged.groupby('PPL')[valid_ppl_cols].sum().reset_index()
+                    
+                    group_cols = ['PPL']
+                    if 'Pj-Kuda' in df_merged.columns:
+                        group_cols.insert(0, 'Pj-Kuda')
+                        
+                    df_ppl = df_merged.groupby(group_cols)[valid_ppl_cols].sum().reset_index()
                     
                     # 1. Total semua status (Beban Tugas)
                     # Hindari double counting: Beban sesungguhnya adalah Open + Submit + Draft 1
